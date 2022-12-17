@@ -50,9 +50,6 @@ const dynamoResource: AWS['resources']['Resources'] = {
 
             // Need to setup stream so whenever data changes (delete in our case), this prop will stream data to lambda (send data to lambda)
             StreamSpecification: {
-                // Indicates whether DynamoDB Streams is to be enabled (true) or disabled (false)
-                StreamEnabled: true,
-
                 /**
                  * StreamViewTypes determines what kind of data we want to send in the stream to view
                  * There are four types of StreamViewTypes
