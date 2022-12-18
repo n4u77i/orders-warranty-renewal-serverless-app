@@ -13,8 +13,8 @@ const dynamoResource: AWS['resources']['Resources'] = {
             // Defining table attributes (columns)
             AttributeDefinitions: [
                 {
-                    // ID attribute of type string
-                    AttributeName: 'id',
+                    // <orderId> attribute will be the unique primary/partition key of type string acting as unique ID
+                    AttributeName: 'orderId',
                     AttributeType: 'S',
                 },
 
@@ -38,7 +38,7 @@ const dynamoResource: AWS['resources']['Resources'] = {
             KeySchema: [
                 {
                     // ID attribute will be the key
-                    AttributeName: 'id',
+                    AttributeName: 'orderId',
 
                     // The type will be HASH which is for uniquely identifying
                     KeyType: 'HASH',
