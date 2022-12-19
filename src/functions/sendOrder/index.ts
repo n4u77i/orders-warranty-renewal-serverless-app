@@ -2,8 +2,8 @@
  * SNS Client - AWS SDK for JS v3: https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-sns/index.html
  * SES Client - AWS SDK for JS v3: https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-ses/index.html
  */
-import { SNSClient } from '@aws-sdk/client-sns';
-import { SESClient } from '@aws-sdk/client-ses';
+import { SNSClient, PublishCommand, PublishCommandInput } from '@aws-sdk/client-sns';
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 
 import { DynamoDBStreamEvent } from 'aws-lambda';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
@@ -24,18 +24,20 @@ export const handler = async (event: DynamoDBStreamEvent) => {
              */
             const data = unmarshall(order.dynamodb.OldImage as Record<string, AttributeValue>)
 
-            const { companyName, carName, email, phoneNumber } = data
+            const { companyName, carName, email, phoneNumber, orderId } = data
+
+            console.log('In handler')
 
             if (email) {
-                await sendEmail({email, companyName, carName})
+                await sendEmail({email, companyName, carName, orderId})
             }
 
             if (phoneNumber) {
-                await sendSMS({phoneNumber, companyName, carName})
+                await sendSMS({phoneNumber, companyName, carName, orderId})
             }
         })
 
-        Promise.all(orderPromises)
+        await Promise.all(orderPromises)
     } catch (error) {
         console.log('Error: ', error)
         return formatJSONResponse({
@@ -51,22 +53,72 @@ const sendEmail = async ({
     email,
     companyName,
     carName,
+    orderId,
 }: {
     email: string,
     companyName: string,
     carName: string,
+    orderId: string,
 }) => {
-    
+    /**
+     * SendEmailCommandInput will prepare the input data to send email from SES
+     * https://docs.aws.amazon.com/ses/latest/APIReference/API_SendEmail.html
+     * https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SES.html#sendEmail-property
+     */
+    const params: SendEmailCommandInput = {
+        Source: 'batch17.94@gmail.com',
+        Destination: {
+            ToAddresses: [email]
+        },
+        Message: {
+            Subject: {
+                Charset: 'UTF-8',
+                Data: `${companyName} Warranty expired`
+            },
+            Body: {
+                Text: {
+                    Charset: 'UTF-8',
+                    Data: `Your warranty has been expired against order number ${orderId}. You ordered ${companyName} ${carName}`
+                }
+            }
+        }
+    }
+
+    console.log('In sendEmail()')
+
+    // SendEmailCommand will create the command for sending email
+    const command = new SendEmailCommand(params)
+    const response = await sesClient.send(command)
+
+    return response.MessageId
 }
 
 const sendSMS = async ({
     phoneNumber,
     companyName,
     carName,
+    orderId,
 }: {
     phoneNumber: string,
     companyName: string,
     carName: string,
+    orderId: string,
 }) => {
-    
+    /**
+     * PublishCommandInput will prepare the input data to send SMS from SNS
+     * https://docs.aws.amazon.com/sns/latest/api/API_Publish.html
+     * https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SNS.html#publish-property
+     */
+    const params: PublishCommandInput = {
+        PhoneNumber: phoneNumber,
+        Message: `Your warranty has been expired against order number ${orderId}. You ordered ${companyName} ${carName}`
+    }
+
+    console.log('In sendSMS()')
+
+    // PublishCommand will create the command for sending SMS
+    const command = new PublishCommand(params)
+    const response = await snsClient.send(command)
+
+    return response.MessageId
 }
