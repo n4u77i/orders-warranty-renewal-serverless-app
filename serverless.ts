@@ -6,7 +6,14 @@ import dynamoResource from './serverless/dynamoResource'
 const serverlessConfiguration: AWS = {
   service: 'orders-warranty-renewal',
   frameworkVersion: '3',
-  plugins: ['serverless-esbuild'],
+  /**
+   * serverless-iam-roles-per-function is a plugin used for assigning specific permissions to specific lambdas
+   * The plugin needs to be installed on as a dev dependency as it is not required by the Lambda functions
+   * This plugin just runs at a compilation time and not in a Lambda
+   * Install it as: npm i -D serverless-iam-roles-per-function
+   * Ref: https://github.com/functionalone/serverless-iam-roles-per-function
+   */
+  plugins: ['serverless-esbuild', 'serverless-iam-roles-per-function'],
   provider: {
     name: 'aws',
     runtime: 'nodejs14.x',
