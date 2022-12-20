@@ -26,8 +26,6 @@ export const handler = async (event: DynamoDBStreamEvent) => {
 
             const { companyName, carName, email, phoneNumber, orderId } = data
 
-            console.log('In handler')
-
             if (email) {
                 await sendEmail({email, companyName, carName, orderId})
             }
@@ -84,8 +82,6 @@ const sendEmail = async ({
         }
     }
 
-    console.log('In sendEmail()')
-
     // SendEmailCommand will create the command for sending email
     const command = new SendEmailCommand(params)
     const response = await sesClient.send(command)
@@ -113,8 +109,6 @@ const sendSMS = async ({
         PhoneNumber: phoneNumber,
         Message: `Your warranty has been expired against order number ${orderId}. You ordered ${companyName} ${carName}`
     }
-
-    console.log('In sendSMS()')
 
     // PublishCommand will create the command for sending SMS
     const command = new PublishCommand(params)
