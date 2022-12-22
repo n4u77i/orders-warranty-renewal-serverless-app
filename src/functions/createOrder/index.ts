@@ -26,7 +26,6 @@ export const handler = async(event: APIGatewayProxyEvent) => {
          */
         const date = new Date()
         date.setFullYear(date.getFullYear() + 2)
-        console.log(date)
 
         const data = {
             // <body> is spreaded at top because if for some reason <pk> is passed to the event, then it shouldn't override the <pk> we defined below
@@ -59,7 +58,7 @@ export const handler = async(event: APIGatewayProxyEvent) => {
         return formatJSONResponse({
             data: {
                 orderId: data.orderId,
-                message: `The order is being made and the warranty expiration is valid till ${new Date(date).toDateString()}`,
+                message: `The order is being made and the warranty will expire on ${new Date(date).toDateString()}`,
             }
         })
     } catch (err) {

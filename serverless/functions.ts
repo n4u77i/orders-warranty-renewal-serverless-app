@@ -73,8 +73,63 @@ const functions: AWS['functions'] = {
                 Action: ["ses:sendEmail", "sns:Publish"],
                 Resource: "*",
             },
+            {
+                Effect: "Allow",
+                Action: "dynamodb:PutItem",
+
+                /**
+                 * ARN for dynamodb resource 'arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:custom.orderTable}'
+                 * Refer AWS Account ID and region in serverless: https://stackoverflow.com/a/68311298
+                 * DynamoDB ARNs: https://iam.cloudonaut.io/reference/dynamodb.html
+                 */
+                Resource: {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "arn:",
+                            "aws:",
+                            "dynamodb:${aws:region}:${aws:accountId}:",
+                            "table/${self:custom.orderTable}",
+                        ]
+                    ]
+                }
+            }
         ],
-    }
+    },
+
+    updateOrder: {
+        // Lambda handler function path
+        handler: 'src/functions/updateOrder/index.handler',
+
+        // Event to trigger lambda function
+        events: [
+            {
+                httpApi: {
+                    path: '/renew',
+                    method: 'get'
+                }
+            }
+        ],
+
+        // @ts-expect-error
+        iamRoleStatements: [
+            {
+                Effect: "Allow",
+                Action: ["dynamodb:UpdateItem", "dynamodb:UpdateTable", "dynamodb:UpdateTimeToLive"],
+                Resource: {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "arn:",
+                            "aws:",
+                            "dynamodb:${aws:region}:${aws:accountId}:",
+                            "table/${self:custom.orderTable}",
+                        ]
+                    ]
+                }
+            }
+        ],
+    },
 }
 
 export default functions;

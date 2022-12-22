@@ -11,7 +11,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
  * DocumentDB Client - AWS SDK for JS v3
  * https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_lib_dynamodb.html
  */
-import { PutCommand, PutCommandInput } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, PutCommandInput, UpdateCommand, UpdateCommandInput } from '@aws-sdk/lib-dynamodb';
 
 // Optionally pass region but by default it sets region where Lambda is deployed
 const dynamoClient = new DynamoDBClient({})
@@ -28,6 +28,20 @@ export const dynamo = {
 
         // PutCommand will create the command for write
         const command = new PutCommand(params)
+
+        await dynamoClient.send(command)
+
+        return data
+    },
+
+    update: async (tableName: string, data: Record<string, any>, key: Record<string, any>) => {
+        const params: UpdateCommandInput = {
+            TableName: tableName,
+            Key: key,
+            AttributeUpdates: data
+        }
+
+        const command = new UpdateCommand(params)
 
         await dynamoClient.send(command)
 
