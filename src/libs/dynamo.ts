@@ -35,12 +35,44 @@ export const dynamo = {
     },
 
     update: async (tableName: string, data: Record<string, any>, key: Record<string, any>) => {
+        const { TTL, expired, warrantyExpiry, sk } = data
+
+        /**
+         * UpdateCommandInput will prepare the input data we need to update in the dynamo table
+         * API Reference: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateItem.html
+         * Update using AWS SDK: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/example_dynamodb_UpdateItem_section.html
+         * NodeJS DynamoDB updateItem: https://stackoverflow.com/questions/41915438/node-js-aws-dynamodb-updateitem
+         */
         const params: UpdateCommandInput = {
             TableName: tableName,
             Key: key,
-            AttributeUpdates: data
+
+            /**
+             * To set substitution names for attributes used in an expression for referencing
+             * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateItem.html#DDB-UpdateItem-request-ExpressionAttributeNames
+             */
+            ExpressionAttributeNames: {
+                '#timeToLive': 'TTL',
+                '#expiredKey': 'expired',
+                '#warrantyExpireyKey': 'warrantyExpiry',
+                '#skKey': 'sk'
+            },
+            UpdateExpression: "SET #expiredKey = :expiredVal, #timeToLive = :ttlVal, #warrantyExpireyKey = :warrantyExpiryVal, #skKey = :skVal",
+
+            /**
+             * A kind of substitution table to define value for a substitution
+             * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateItem.html#DDB-UpdateItem-request-ExpressionAttributeValues
+             * https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-dynamodb/interfaces/queryinput.html#expressionattributevalues
+             */
+            ExpressionAttributeValues: {
+                ':ttlVal': TTL,
+                ':expiredVal': expired,
+                ':warrantyExpiryVal': warrantyExpiry,
+                ':skVal': sk
+            },
         }
 
+        // UpdateCommand will create the command for write
         const command = new UpdateCommand(params)
 
         await dynamoClient.send(command)

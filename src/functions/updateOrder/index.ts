@@ -45,6 +45,7 @@ export const handler = async (event: APIGatewayProxyEvent) => {
              */
             expired: null,
             warrantyExpiry: date.getTime(),
+            sk: date.toString(),
         }
 
         const key = {
