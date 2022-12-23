@@ -85,7 +85,7 @@ const sendEmail = async ({
                 Text: {
                     Charset: 'UTF-8',
                     Data: `Your warranty has been expired against order number ${orderId}. You ordered ${companyName} ${carName}\n`
-                            + `Click the link to renew order ${process.env.baseUrl}/renew/orderId?=${orderRenewalId}`
+                            + `Click the link to renew order ${process.env.baseUrl}/renew?orderId=${orderRenewalId}`
                 }
             }
         }
@@ -119,7 +119,7 @@ const sendSMS = async ({
     const params: PublishCommandInput = {
         PhoneNumber: phoneNumber,
         Message: `Your warranty has been expired against order number ${orderId}. You ordered ${companyName} ${carName}\n`
-                    + `Click the link to renew order ${process.env.baseUrl}/renew/orderId?=${orderRenewalId}`
+                    + `Click the link to renew order ${process.env.baseUrl}/renew?orderId=${orderRenewalId}`
     }
 
     // PublishCommand will create the command for sending SMS

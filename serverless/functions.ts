@@ -106,7 +106,7 @@ const functions: AWS['functions'] = {
             {
                 httpApi: {
                     path: '/renew',
-                    method: 'get'
+                    method: 'put'
                 }
             }
         ],

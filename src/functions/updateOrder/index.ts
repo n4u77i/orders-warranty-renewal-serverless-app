@@ -4,7 +4,7 @@ import { APIGatewayProxyEvent } from "aws-lambda";
 
 export const handler = async (event: APIGatewayProxyEvent) => {
     try {
-        console.log('In updateorder()')
+        console.log('In updateOrder()')
         /**
          * The url will have some params and it will be like apiUrl/renew?orderId=<random-order-id>
          * Destructuring the <event> varaibale to get param value passed in url
