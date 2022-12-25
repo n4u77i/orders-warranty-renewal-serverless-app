@@ -146,6 +146,21 @@ const functions: AWS['functions'] = {
             }
         ]
     },
+
+    getOrder: {
+        // Lambda handler function path
+        handler: 'src/functions/getOrder/index.handler',
+
+        // Event to trigger lambda function
+        events: [
+            {
+                httpApi: {
+                    path: '/order/{orderId}',
+                    method: 'get'
+                }
+            }
+        ]
+    },
 }
 
 export default functions;

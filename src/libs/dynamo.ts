@@ -13,7 +13,8 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
  */
 import { PutCommand, PutCommandInput, 
     UpdateCommand, UpdateCommandInput, 
-    QueryCommand, QueryCommandInput 
+    QueryCommand, QueryCommandInput,
+    GetCommand, GetCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 
 // Optionally pass region but by default it sets region where Lambda is deployed
@@ -82,6 +83,17 @@ export const dynamo = {
 
         return data
     },
+
+    /**
+     * A thread in StackOverflow explaining when to use following of the operations for reading record(s) from dynamodb
+     * https://stackoverflow.com/a/12248430
+     * 
+     * The image in thread when to use:
+     * Scan
+     * Query
+     * GetItem
+     * BatchGetItem
+     */
 
     query: async ({
         tableName,
@@ -167,5 +179,30 @@ export const dynamo = {
 
         // Array of items which matches the query
         return response.Items
+    },
+
+    get: async ({
+        tableName,
+        key,
+    }: {
+        tableName: string,
+        key: Record<string, any>
+    }) => {
+        /**
+         * GetCommandInput will prepare the data for getting single item from the dynamo table
+         * https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_lib_dynamodb.html#getcommandinput-2
+         * https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/dynamodb-example-table-read-write.html#dynamodb-example-table-read-write-getting-an-item
+         */
+        const params: GetCommandInput = {
+            TableName: tableName,
+            Key: key
+        }
+
+        // GetCommand will create the command for getting single item
+        const command = new GetCommand(params)
+
+        const response = await dynamoClient.send(command)
+
+        return response.Item
     }
 }
