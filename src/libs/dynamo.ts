@@ -11,7 +11,10 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
  * DocumentDB Client - AWS SDK for JS v3
  * https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_lib_dynamodb.html
  */
-import { PutCommand, PutCommandInput, UpdateCommand, UpdateCommandInput } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, PutCommandInput, 
+    UpdateCommand, UpdateCommandInput, 
+    QueryCommand, QueryCommandInput 
+} from '@aws-sdk/lib-dynamodb';
 
 // Optionally pass region but by default it sets region where Lambda is deployed
 const dynamoClient = new DynamoDBClient({})
@@ -78,5 +81,91 @@ export const dynamo = {
         await dynamoClient.send(command)
 
         return data
+    },
+
+    query: async ({
+        tableName,
+        index,
+
+        // Value of the partition key (required)
+        pkValue,
+
+        /**
+         * Name of partition key defined in index1 in dynamoResources.ts that is <pk>
+         * If querying on index1, the <pkKey> will be 'pk'
+         * But if querying on index2 in the future, that could be a different partion key
+         * For now, defaulting it to 'pk'
+         */
+        pkKey = 'pk',
+
+        // Value of the partition key (required)
+        skValue,
+
+        /**
+         * Name of sort key defined in index1 in dynamoResources.ts that is <sk>
+         * If querying on index1, the <skKey> will be 'sk'
+         * But if querying on index2 in the future, that could be a different partion key
+         * For now, defaulting it to 'sk'
+         */
+        skKey = 'sk',
+
+        sortAscending = true,
+    }: {
+        tableName: string,
+        index: string,
+        pkValue: string,
+        pkKey?: string,
+        skValue?: string,
+        skKey?: string,
+        sortAscending?: boolean,
+    }) => {
+        // If sort key value is passed
+        const skExpression =  skValue ? ` AND ${skKey} = :rangeValue` : ''
+
+        /**
+         * QueryCommandInput will prepare the data for query in the dynamo table
+         * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html#API_Query_RequestSyntax
+         */
+        const params: QueryCommandInput = {
+            TableName: tableName,
+            IndexName: index,
+
+            /**
+             * A little bit kind of query to interact with data like SQL query but works very slightly differently
+             * :hashValue is a substitution for adding values dynamically
+             * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html#DDB-Query-request-KeyConditionExpression
+             * https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-dynamodb/interfaces/queryinput.html#keyconditionexpression
+             */
+            KeyConditionExpression: `${pkKey} = :hashValue${skExpression}`,
+
+            /**
+             * A kind of substitution table to define value for a substitution
+             * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html#DDB-Query-request-ExpressionAttributeValues
+             * https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-dynamodb/interfaces/queryinput.html#expressionattributevalues
+             */
+            ExpressionAttributeValues: {
+                ':hashValue': pkValue,
+            },
+
+            /**
+             * Define sort order for the query result
+             * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html#DDB-Query-request-ScanIndexForward
+             * https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-dynamodb/interfaces/queryinput.html#scanindexforward
+             */
+            ScanIndexForward: sortAscending,
+        }
+
+        // Is sort key value is passed, adding value for <skKey> substitution
+        if (skValue) {
+            params.ExpressionAttributeValues[':rangeValue'] = skValue
+        }
+
+        // QueryCommand will create the command for querying
+        const command = new QueryCommand(params)
+
+        const response = await dynamoClient.send(command)
+
+        // Array of items which matches the query
+        return response.Items
     }
 }

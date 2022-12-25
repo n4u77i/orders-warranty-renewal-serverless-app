@@ -36,18 +36,37 @@ const serverlessConfiguration: AWS = {
              * Refer AWS Account ID and region in serverless: https://stackoverflow.com/a/68311298
              * DynamoDB ARNs: https://iam.cloudonaut.io/reference/dynamodb.html
              */
-            Resource:
-            {
-              "Fn::Join": [
-                "",
-                [
-                  "arn:",
-                  "aws:",
-                  "dynamodb:${aws:region}:${aws:accountId}:",
-                  "table/${self:custom.orderTable}",
+            Resource: [
+              /**
+               * IAM policy to grant access to a specific DynamoDB table and its indexes
+               * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/iam-policy-specific-table-indexes.html
+               * 
+               * In this case index is used for querying data
+               * Index name is <index1> defined in dynamoResources.ts
+               */
+              {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    "aws:",
+                    "dynamodb:${aws:region}:${aws:accountId}:",
+                    "table/${self:custom.orderTable}",
+                  ]
                 ]
-              ]
-            }
+              },
+              {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    "aws:",
+                    "dynamodb:${aws:region}:${aws:accountId}:",
+                    "table/${self:custom.orderTable}/index/index1",
+                  ]
+                ]
+              }
+            ]
           },
         ]
       }
