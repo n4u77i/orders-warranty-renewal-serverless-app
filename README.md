@@ -4,6 +4,18 @@ This project has been generated using the `aws-nodejs-typescript` template from 
 
 For detailed instructions, please refer to the [documentation](https://www.serverless.com/framework/docs/providers/aws/).
 
+## About the project
+This project is about creating orders and renewing them when expired. When the order is created by user, the warranty is added which will get expire after **two years** when order is created.
+
+When the order is expired (TTL expires), it gets deleted (from dynamodb) and a notification is sent to the user to their email or phone numebr via **SES** or **SNS** respectively (lambda is triggered on REMOVE stream event).
+
+At the same time, new record is added in dynamodb with same data except for a **TTL of 30-days**. Users will get a link in the notification to renew their order which will be valid for 30-days.
+
+If order is renewed, it will then expire after next two years otherwise it will be deleted automatically from dynamodb permanently.
+
+**Note:**
+The services **SNS** and **SES** used in this project are configured to run in sandboxed environment to avoid charges.
+
 ## Installation/deployment instructions
 
 Depending on your preferred package manager, follow the instructions below to deploy your project.
@@ -20,38 +32,53 @@ Depending on your preferred package manager, follow the instructions below to de
 - Run `yarn` to install the project dependencies
 - Run `yarn sls deploy` to deploy this stack to AWS
 
-## Test your service
+### Using Serverless
 
-This template contains a single lambda function triggered by an HTTP request made on the provisioned API Gateway REST API `/hello` route with `POST` method. The request body must be provided as `application/json`. The body structure is tested by API Gateway against `src/functions/hello/schema.ts` JSON-Schema definition: it must contain the `name` property.
+- Run `sls deploy` to deploy this stack to AWS
 
-- requesting any other path than `/hello` with any other method than `POST` will result in API Gateway returning a `403` HTTP error code
-- sending a `POST` request to `/hello` with a payload **not** containing a string property named `name` will result in API Gateway returning a `400` HTTP error code
-- sending a `POST` request to `/hello` with a payload containing a string property named `name` will result in API Gateway returning a `200` HTTP status code with a message saluting the provided name and the detailed event processed by the lambda
+## Testing the service
 
-> :warning: As is, this template, once deployed, opens a **public** endpoint within your AWS account resources. Anybody with the URL can actively execute the API Gateway endpoint and the corresponding lambda. You should protect this endpoint with the authentication method of your choice.
+This template contain five lambda functions, four of them are triggered by an HTTP request made on the provisioned API Gateway REST API:
+>-  `/` route with `POST` method which takes body input in JSON format.
+>- `/user/{userId}` and `/order/{orderId}` routes with `GET` methods.
+>- `/renew` route with `PUT` method to update specific order.
+>-  And the last lambda function is triggered by the dynamodb stream on the `REMOVE` event when TTL of a record is expired.
 
-### Locally
 
-In order to test the hello function locally, run the following command:
+The body structure is tested by API Gateway against the following:
+1. `src/functions/createOrder/index.ts`
+2. `src/functions/getOrder/index.ts`
+3. `src/functions/getOrders/index.ts`
+4. `src/functions/sendOrder/index.ts`
+5. `src/functions/updateOrder/index.ts`
 
-- `npx sls invoke local -f hello --path src/functions/hello/mock.json` if you're using NPM
-- `yarn sls invoke local -f hello --path src/functions/hello/mock.json` if you're using Yarn
+## Testing the endpoints
 
-Check the [sls invoke local command documentation](https://www.serverless.com/framework/docs/providers/aws/cli-reference/invoke-local/) for more information.
+ - The `/` route with `POST` method requires data in the body in a **JSON** format. 
+    - The required params are `companyName` and `carName` of type string and number respectively.
+    - Third param can either be `phoneNumber` or `email` of string. Country code is required before number.
+    ```
+    {
+        "phoneNumber": "+920000000000",
+        "companyName": "Dodge",
+        "carName": "Challenger SRT Hellcat"
+    }
+    ```
+    **OR**
+    ```
+    {
+        "email": "youremail@gmail.com",
+        "companyName": "Dodge",
+        "carName": "Challenger SRT Hellcat"
+    }
+    ```
+- The `/user/{userId}` route with a `GET` method requires the `userId` which can be a `phoneNumber` or `email` entered when creating order. This route will be used to query all order of a user.
+- The `/order/{orderId}` route with a `GET` method requires the `orderId` to get specific order.
+- The `/renew` route with a `PUT` method requires `orderId` in query param of URL to update order. The exact route will be `/renew?orderId={orderId}`
 
-### Remotely
+**All endpoints are tested on Postman**
 
-Copy and replace your `url` - found in Serverless `deploy` command output - and `name` parameter in the following `curl` command in your terminal or in Postman to test your newly deployed application.
-
-```
-curl --location --request POST 'https://myApiEndpoint/dev/hello' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "name": "Frederic"
-}'
-```
-
-## Template features
+> :warning: As is, this template, once deployed, open **public** endpoints within your AWS account resources. Anybody with the URLs can actively execute the API Gateway endpoint and the corresponding lambda. You should protect these endpoints with the authentication method of your choice.
 
 ### Project structure
 
@@ -64,32 +91,25 @@ The project code base is mainly located within the `src` folder. This folder is 
 .
 ├── src
 │   ├── functions               # Lambda configuration and source code folder
-│   │   ├── hello
-│   │   │   ├── handler.ts      # `Hello` lambda source code
-│   │   │   ├── index.ts        # `Hello` lambda Serverless configuration
-│   │   │   ├── mock.json       # `Hello` lambda input parameter, if any, for local invocation
-│   │   │   └── schema.ts       # `Hello` lambda input event JSON-Schema
-│   │   │
-│   │   └── index.ts            # Import/export of all lambda configurations
-│   │
-│   └── libs                    # Lambda shared code
-│       └── apiGateway.ts       # API Gateway specific helpers
-│       └── handlerResolver.ts  # Sharable library for resolving lambda handlers
-│       └── lambda.ts           # Lambda middleware
-│
+│   │   ├── createOrder
+│   │   │   └── index.ts        # Export of handler for createOrder lambda function
+│   │   ├── getOrder
+│   │   │   └── index.ts        # Export of handler for getOrder lambda function
+│   │   ├── getOrders
+│   │   │   └── index.ts        # Export of handler for getOrders lambda function
+│   │   ├── sendOrder
+│   │   │   └── index.ts        # Export of handler for sendOrder lambda function
+│   │   └── updateOrder
+│   │       └── index.ts        # Export of handler for updateOrder lambda function
+│   └── libs                    
+│       ├── apiGateway.ts       # API Gateway specific helper functions
+|       └── dynamo.ts           # Methods for interacting with dynaomo db 
+├── serverless
+│   ├── functions.ts            # Handlers path for lambda functions
+|   └── dynamoResources.ts      # To add aws dynamo db resource
 ├── package.json
 ├── serverless.ts               # Serverless service file
 ├── tsconfig.json               # Typescript compiler configuration
 ├── tsconfig.paths.json         # Typescript paths
 └── webpack.config.js           # Webpack configuration
 ```
-
-### 3rd party libraries
-
-- [json-schema-to-ts](https://github.com/ThomasAribart/json-schema-to-ts) - uses JSON-Schema definitions used by API Gateway for HTTP request validation to statically generate TypeScript types in your lambda's handler code base
-- [middy](https://github.com/middyjs/middy) - middleware engine for Node.Js lambda. This template uses [http-json-body-parser](https://github.com/middyjs/middy/tree/master/packages/http-json-body-parser) to convert API Gateway `event.body` property, originally passed as a stringified JSON, to its corresponding parsed object
-- [@serverless/typescript](https://github.com/serverless/typescript) - provides up-to-date TypeScript definitions for your `serverless.ts` service file
-
-### Advanced usage
-
-Any tsconfig.json can be used, but if you do, set the environment variable `TS_NODE_CONFIG` for building the application, eg `TS_NODE_CONFIG=./tsconfig.app.json npx serverless webpack`
